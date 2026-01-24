@@ -12,7 +12,7 @@ Running Claude Code as a persistent agent with messaging integrations requires s
 
 A single setup script that transforms a fresh Debian/Ubuntu server into a fully-configured Claude Code hub with:
 
-- **Messaging integrations** via MCP servers (Telegram, Signal, Twilio SMS)
+- **Telegram integration** via bot API for message processing
 - **Persistent sessions** via tmux with agent-optimized layouts
 - **Power-user shell** via zsh + oh-my-zsh + Powerlevel10k
 - **Security hardening** via UFW firewall, fail2ban, and SSH lockdown
@@ -22,12 +22,12 @@ A single setup script that transforms a fresh Debian/Ubuntu server into a fully-
 | Feature | Description |
 |---------|-------------|
 | Claude Code | Native binary with MCP server configuration |
-| Telegram MCP | Send/receive messages through Telegram API |
-| Signal MCP | Encrypted messaging via signal-cli |
-| Twilio SMS | Text message integration |
+| Telegram Bot | Receive/send messages through Telegram Bot API |
 | tmux layouts | Pre-configured agent, dev, and monitor modes |
 | zsh environment | Aliases, functions, and productivity plugins |
 | Security | Firewall, intrusion prevention, SSH hardening |
+
+> **Future integrations:** See [docs/FUTURE.md](docs/FUTURE.md) for planned Signal and Twilio SMS support.
 
 ## Target Users
 
@@ -55,15 +55,17 @@ A single setup script that transforms a fresh Debian/Ubuntu server into a fully-
 ┌─────────────────────────────────────────────┐
 │              Hyperion Hub                    │
 ├─────────────────────────────────────────────┤
-│  tmux sessions                              │
-│  ├── agent (Claude Code + MCP env)         │
-│  ├── dev (Claude + terminal panes)         │
-│  └── monitor (htop + logs + status)        │
+│  systemd services                           │
+│  ├── hyperion-daemon (Claude processor)    │
+│  └── hyperion-router (Telegram bot)        │
 ├─────────────────────────────────────────────┤
-│  MCP Servers                                │
-│  ├── telegram-mcp (Python/Telethon)        │
-│  ├── signal-mcp (signal-cli)               │
-│  └── twilio-sms (Node.js)                  │
+│  MCP Server                                 │
+│  └── hyperion-inbox (message queue)        │
+├─────────────────────────────────────────────┤
+│  tmux sessions (optional)                   │
+│  ├── agent (Claude Code)                   │
+│  ├── dev (Claude + terminal panes)         │
+│  └── monitor (htop + logs)                 │
 ├─────────────────────────────────────────────┤
 │  Security Layer                             │
 │  ├── UFW (SSH only by default)             │
@@ -75,12 +77,12 @@ A single setup script that transforms a fresh Debian/Ubuntu server into a fully-
 ## Quick Start
 
 ```bash
-# Run setup
-bash setup.sh
+# Run installer
+bash install.sh
 
-# Configure credentials
-nano ~/mcp-servers/config/.env.master
+# Start services
+sudo systemctl start hyperion
 
-# Start agent session
+# Or start interactive session
 agent
 ```

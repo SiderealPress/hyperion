@@ -9,12 +9,9 @@ Creates its own session ID on first startup for persistent context.
 import asyncio
 import json
 import logging
-import os
-import subprocess
 import sys
 import time
 import uuid
-from datetime import datetime
 from pathlib import Path
 
 # Configuration

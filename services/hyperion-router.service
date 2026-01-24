@@ -6,19 +6,17 @@ After=network.target
 Type=simple
 User=admin
 Group=admin
-WorkingDirectory=/home/admin/hyperion-hub
+WorkingDirectory=/home/admin/hyperion
 Environment=PATH=/home/admin/.local/bin:/home/admin/.cargo/bin:/usr/local/bin:/usr/bin:/bin
-EnvironmentFile=/home/admin/hyperion-hub/config/config.env
-ExecStart=/home/admin/hyperion-hub/.venv/bin/python /home/admin/hyperion-hub/src/bot/hyperion_bot.py
+EnvironmentFile=/home/admin/hyperion/config/config.env
+ExecStart=/home/admin/hyperion/.venv/bin/python /home/admin/hyperion/src/bot/hyperion_bot.py
 Restart=always
 RestartSec=10
 
-# Logging
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=hyperion-router
 
-# Security
 NoNewPrivileges=true
 PrivateTmp=true
 

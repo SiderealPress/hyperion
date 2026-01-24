@@ -39,22 +39,11 @@ for d in [INBOX_DIR, OUTBOX_DIR, PROCESSED_DIR, CONFIG_DIR]:
 if not TASKS_FILE.exists():
     TASKS_FILE.write_text(json.dumps({"tasks": [], "next_id": 1}, indent=2))
 
-# Source configurations (which sources are enabled and their reply mechanisms)
+# Source configurations
 SOURCES = {
     "telegram": {
         "name": "Telegram",
         "enabled": True,
-        "reply_via": "outbox",  # Write to outbox, bot picks it up
-    },
-    "sms": {
-        "name": "SMS (Twilio)",
-        "enabled": False,
-        "reply_via": "outbox",
-    },
-    "signal": {
-        "name": "Signal",
-        "enabled": False,
-        "reply_via": "outbox",
     },
 }
 

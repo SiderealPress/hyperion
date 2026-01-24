@@ -8,18 +8,16 @@ Type=simple
 User=admin
 Group=admin
 WorkingDirectory=/home/admin/hyperion-workspace
-Environment=PATH=/home/admin/.local/bin:/home/admin/.cargo/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=/home/admin/.claude/bin:/home/admin/.local/bin:/home/admin/.cargo/bin:/usr/local/bin:/usr/bin:/bin
 Environment=HOME=/home/admin
-ExecStart=/usr/bin/python3 /home/admin/hyperion-hub/src/daemon/daemon.py
+ExecStart=/usr/bin/python3 /home/admin/hyperion/src/daemon/daemon.py
 Restart=always
 RestartSec=10
 
-# Logging
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=hyperion-daemon
 
-# Security
 NoNewPrivileges=true
 PrivateTmp=true
 

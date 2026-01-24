@@ -167,7 +167,6 @@ source $ZSH/oh-my-zsh.sh
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.npm-global/bin:$PATH"
 export PATH="$HOME/.claude/bin:$PATH"
-export PATH="$HOME/mcp-servers/signal/signal-cli-0.13.4/bin:$PATH"
 
 # Editor
 export EDITOR='nano'
@@ -253,11 +252,6 @@ alias agent-mon='~/start-agent.sh mon monitor'
 # Status
 alias status='~/check-status.sh'
 
-# MCP servers
-alias mcp-telegram='cd ~/mcp-servers/telegram && source .venv/bin/activate'
-alias mcp-signal='cd ~/mcp-servers/signal'
-alias mcp-env='source ~/mcp-servers/config/.env.master'
-
 #-------------------------------------------------------------------------------
 # Aliases - Tmux
 #-------------------------------------------------------------------------------
@@ -298,12 +292,6 @@ tma() {
     tmux attach -t "$session" 2>/dev/null || tmux new-session -s "$session"
 }
 
-# Claude with automatic MCP env loading
-claude-env() {
-    source ~/mcp-servers/config/.env.master 2>/dev/null
-    claude "$@"
-}
-
 #-------------------------------------------------------------------------------
 # Key Bindings
 #-------------------------------------------------------------------------------
@@ -321,14 +309,6 @@ bindkey '^x^e' edit-command-line
 #-------------------------------------------------------------------------------
 
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-#-------------------------------------------------------------------------------
-# Auto-load MCP environment if in agent session
-#-------------------------------------------------------------------------------
-
-if [[ -n "$TMUX" ]] && [[ "$(tmux display-message -p '#S')" == agent* ]]; then
-    source ~/mcp-servers/config/.env.master 2>/dev/null
-fi
 
 # Welcome message
 if [[ $- == *i* ]]; then
@@ -523,7 +503,7 @@ bind -T copy-mode-vi Escape send -X cancel
 
 # A = Agent layout: claude + monitoring sidebar
 bind A new-window -n 'agent' \; \
-    send-keys 'source ~/mcp-servers/config/.env.master && claude' Enter \; \
+    send-keys 'claude' Enter \; \
     split-window -h -p 30 \; \
     send-keys 'htop' Enter \; \
     select-pane -t 0
@@ -545,7 +525,7 @@ bind M new-window -n 'monitor' \; \
 
 # C = Quick Claude (single pane)
 bind C new-window -n 'claude' \; \
-    send-keys 'source ~/mcp-servers/config/.env.master && claude' Enter
+    send-keys 'claude' Enter
 
 #-------------------------------------------------------------------------------
 # Status Bar (Clean minimal theme)
@@ -635,84 +615,9 @@ print_header "Step 6: Installing Claude Code"
 curl -fsSL https://claude.ai/install.sh | bash
 
 #-------------------------------------------------------------------------------
-# MCP Servers
-#-------------------------------------------------------------------------------
-print_header "Step 7: Setting Up MCP Servers"
-
-mkdir -p ~/mcp-servers/{telegram,signal,sms,config}
-mkdir -p ~/.claude
-
-# Telegram
-cd ~/mcp-servers/telegram
-git clone https://github.com/chigwell/telegram-mcp.git . 2>/dev/null || git pull
-python3 -m venv .venv
-source .venv/bin/activate
-pip install telethon python-dotenv mcp
-deactivate
-
-cat > .env.example << 'EOF'
-TELEGRAM_API_ID=your_api_id
-TELEGRAM_API_HASH=your_api_hash
-TELEGRAM_SESSION_NAME=hyperion
-EOF
-
-# Signal
-cd ~/mcp-servers/signal
-SIGNAL_CLI_VERSION="0.13.4"
-wget -q "https://github.com/AsamK/signal-cli/releases/download/v${SIGNAL_CLI_VERSION}/signal-cli-${SIGNAL_CLI_VERSION}-Linux.tar.gz"
-tar xf "signal-cli-${SIGNAL_CLI_VERSION}-Linux.tar.gz"
-rm "signal-cli-${SIGNAL_CLI_VERSION}-Linux.tar.gz"
-git clone https://github.com/rymurr/signal-mcp.git mcp-server 2>/dev/null || true
-
-# Twilio SMS
-cd ~/mcp-servers/sms
-export PATH="$HOME/.npm-global/bin:$PATH"
-npm install -g @yiyang.1i/sms-mcp-server 2>/dev/null || true
-
-#-------------------------------------------------------------------------------
-# Claude MCP Config
-#-------------------------------------------------------------------------------
-print_header "Step 8: Creating MCP Configuration"
-
-cat > ~/.claude/settings.json << 'EOF'
-{
-  "mcpServers": {
-    "telegram": {
-      "command": "uv",
-      "args": ["--directory", "~/mcp-servers/telegram", "run", "main.py"]
-    },
-    "twilio-sms": {
-      "command": "npx",
-      "args": ["-y", "@yiyang.1i/sms-mcp-server"],
-      "env": {
-        "ACCOUNT_SID": "${TWILIO_ACCOUNT_SID}",
-        "AUTH_TOKEN": "${TWILIO_AUTH_TOKEN}",
-        "FROM_NUMBER": "${TWILIO_FROM_NUMBER}"
-      }
-    }
-  }
-}
-EOF
-
-cat > ~/mcp-servers/config/.env.master << 'EOF'
-# Hyperion Agent Hub - Credentials
-# Telegram: https://my.telegram.org/apps
-export TELEGRAM_API_ID=""
-export TELEGRAM_API_HASH=""
-
-# Twilio: https://console.twilio.com
-export TWILIO_ACCOUNT_SID=""
-export TWILIO_AUTH_TOKEN=""
-export TWILIO_FROM_NUMBER=""
-
-# Signal phone number
-export SIGNAL_PHONE_NUMBER=""
-EOF
-
-#-------------------------------------------------------------------------------
 # Security
 #-------------------------------------------------------------------------------
-print_header "Step 9: Security Hardening"
+print_header "Step 7: Security Hardening"
 
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
@@ -732,14 +637,12 @@ EOF
 #-------------------------------------------------------------------------------
 # Helper Scripts
 #-------------------------------------------------------------------------------
-print_header "Step 10: Creating Helper Scripts"
+print_header "Step 8: Creating Helper Scripts"
 
 cat > ~/start-agent.sh << 'SCRIPT'
 #!/usr/bin/env zsh
 SESSION="${1:-agent}"
 LAYOUT="${2:-default}"
-
-[[ -f ~/mcp-servers/config/.env.master ]] && source ~/mcp-servers/config/.env.master
 
 if tmux has-session -t "$SESSION" 2>/dev/null; then
     echo "📎 Attaching: $SESSION"
@@ -752,22 +655,21 @@ echo "🚀 Creating: $SESSION ($LAYOUT)"
 case "$LAYOUT" in
     dev)
         tmux new-session -d -s "$SESSION" -n 'claude'
-        tmux send-keys -t "$SESSION" 'source ~/mcp-servers/config/.env.master; claude' Enter
+        tmux send-keys -t "$SESSION" 'claude' Enter
         tmux split-window -h -t "$SESSION" -p 35
         tmux select-pane -t "$SESSION":0.0
         ;;
     monitor)
         tmux new-session -d -s "$SESSION" -n 'claude'
-        tmux send-keys -t "$SESSION" 'source ~/mcp-servers/config/.env.master; claude' Enter
+        tmux send-keys -t "$SESSION" 'claude' Enter
         tmux split-window -h -t "$SESSION" -p 30
         tmux send-keys -t "$SESSION" 'htop' Enter
         tmux split-window -v -t "$SESSION"
-        tmux send-keys -t "$SESSION" 'journalctl -f' Enter
+        tmux send-keys -t "$SESSION" 'journalctl -u hyperion-* -f' Enter
         tmux select-pane -t "$SESSION":0.0
         ;;
     *)
         tmux new-session -d -s "$SESSION" -n 'claude'
-        tmux send-keys -t "$SESSION" 'source ~/mcp-servers/config/.env.master' Enter
         tmux send-keys -t "$SESSION" 'echo "🤖 Ready. Type: claude"' Enter
         ;;
 esac
@@ -783,12 +685,9 @@ echo "\n\033[1;34m══ Hyperion Status ══\033[0m\n"
 echo "Claude Code:"
 command -v claude &>/dev/null && echo "  ✔ $(claude --version 2>/dev/null)" || echo "  ✖ Not found"
 
-echo "\nNode.js:"
-command -v node &>/dev/null && echo "  ✔ $(node --version)" || echo "  ✖ Not found"
-
-echo "\nEnvironment:"
-[[ -n "$TELEGRAM_API_ID" ]] && echo "  ✔ TELEGRAM" || echo "  ✖ TELEGRAM"
-[[ -n "$TWILIO_ACCOUNT_SID" ]] && echo "  ✔ TWILIO" || echo "  ✖ TWILIO"
+echo "\nServices:"
+systemctl is-active hyperion-router &>/dev/null && echo "  ✔ hyperion-router" || echo "  ✖ hyperion-router"
+systemctl is-active hyperion-daemon &>/dev/null && echo "  ✔ hyperion-daemon" || echo "  ✖ hyperion-daemon"
 
 echo "\nTmux Sessions:"
 tmux list-sessions 2>/dev/null || echo "  None"
@@ -833,9 +732,15 @@ agent mon monitor  # Monitor layout (htop + logs)
 | `tl` | List sessions |
 
 ## Setup
-1. `nano ~/mcp-servers/config/.env.master` - Add credentials
-2. `agent` - Start session
-3. `claude` - Authenticate
+1. `agent` - Start tmux session
+2. `claude` - Start Claude
+
+## Hyperion Services
+```zsh
+sudo systemctl start hyperion   # Start all services
+sudo systemctl status hyperion  # Check status
+journalctl -u hyperion-* -f     # View logs
+```
 
 ## Install Tmux Plugins
 Inside tmux: `Ctrl-a I`
@@ -844,7 +749,7 @@ EOF
 #-------------------------------------------------------------------------------
 # Set Zsh Default
 #-------------------------------------------------------------------------------
-print_header "Step 11: Setting Zsh as Default"
+print_header "Step 9: Setting Zsh as Default"
 
 sudo chsh -s $(which zsh) $(whoami)
 
@@ -856,8 +761,7 @@ print_header "Setup Complete!"
 echo -e "${GREEN}Hyperion Agent Hub ready!${NC}\n"
 echo "Next:"
 echo "  1. ${YELLOW}exec zsh${NC} (or log out/in)"
-echo "  2. ${CYAN}nano ~/mcp-servers/config/.env.master${NC}"
-echo "  3. ${CYAN}agent${NC}"
-echo "  4. Inside tmux: ${CYAN}Ctrl-a I${NC} (install plugins)"
+echo "  2. ${CYAN}agent${NC} (start a Claude session)"
+echo "  3. Inside tmux: ${CYAN}Ctrl-a I${NC} (install plugins)"
 echo ""
 echo "Docs: ~/README.md"

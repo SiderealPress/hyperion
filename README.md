@@ -12,7 +12,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/SiderealPress/hyperion/main/
 
 Hyperion transforms a server into an always-on Claude Code hub that:
 
-- **Processes messages 24/7** via Telegram (SMS/Signal planned)
+- **Processes messages 24/7** via Telegram
 - **Maintains persistent context** across restarts
 - **Auto-restarts on failure** via systemd
 - **Provides unified CLI** for management

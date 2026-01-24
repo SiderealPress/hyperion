@@ -443,6 +443,8 @@ fi
 
 step "Installing hyperion CLI..."
 
+# Remove any existing symlink or file
+sudo rm -f /usr/local/bin/hyperion
 sudo cp "$INSTALL_DIR/src/cli" /usr/local/bin/hyperion
 sudo chmod +x /usr/local/bin/hyperion
 

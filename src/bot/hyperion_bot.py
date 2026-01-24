@@ -40,7 +40,6 @@ INBOX_DIR.mkdir(parents=True, exist_ok=True)
 OUTBOX_DIR.mkdir(parents=True, exist_ok=True)
 
 # Logging
-# Logging
 LOG_DIR = Path.home() / "hyperion-workspace" / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -54,9 +53,9 @@ logging.basicConfig(
 )
 log = logging.getLogger("hyperion")
 
-# Global reference to the bot app for sending replies
+# Global reference to the bot app and event loop for sending replies
 bot_app = None
-pending_replies = {}  # msg_id -> chat_id mapping
+main_loop = None
 
 
 class OutboxHandler(FileSystemEventHandler):
@@ -66,7 +65,12 @@ class OutboxHandler(FileSystemEventHandler):
         if event.is_directory:
             return
         if event.src_path.endswith('.json'):
-            asyncio.run(self.process_reply(event.src_path))
+            # Schedule on the bot's event loop from watchdog thread
+            if bot_app and main_loop and main_loop.is_running():
+                asyncio.run_coroutine_threadsafe(
+                    self.process_reply(event.src_path),
+                    main_loop
+                )
 
     async def process_reply(self, filepath):
         try:
@@ -144,12 +148,15 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log.error(f"Error: {context.error}", exc_info=context.error)
 
 
-def main():
-    global bot_app
+async def run_bot():
+    global bot_app, main_loop
 
     log.info("Starting Hyperion Bot v2 (file-based)...")
     log.info(f"Inbox: {INBOX_DIR}")
     log.info(f"Outbox: {OUTBOX_DIR}")
+
+    # Store the event loop for the outbox watcher
+    main_loop = asyncio.get_running_loop()
 
     # Set up outbox watcher
     observer = Observer()
@@ -165,13 +172,26 @@ def main():
     bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     bot_app.add_error_handler(error_handler)
 
-    # Start polling
+    # Initialize and start
+    await bot_app.initialize()
+    await bot_app.start()
     log.info("Bot is now polling...")
+
     try:
-        bot_app.run_polling(allowed_updates=Update.ALL_TYPES)
+        await bot_app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+        # Keep running until interrupted
+        while True:
+            await asyncio.sleep(1)
     finally:
+        await bot_app.updater.stop()
+        await bot_app.stop()
+        await bot_app.shutdown()
         observer.stop()
         observer.join()
+
+
+def main():
+    asyncio.run(run_bot())
 
 
 if __name__ == "__main__":

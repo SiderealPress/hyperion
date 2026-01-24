@@ -41,10 +41,16 @@ log = logging.getLogger("hyperion")
 def get_or_create_session_id() -> str:
     """Get existing session ID or create a new one on first startup."""
     if SESSION_FILE.exists():
-        return SESSION_FILE.read_text().strip()
+        existing = SESSION_FILE.read_text().strip()
+        # Validate it's a proper UUID
+        try:
+            uuid.UUID(existing)
+            return existing
+        except ValueError:
+            log.warning(f"Invalid session ID found, generating new one")
 
-    # Generate a new unique session ID
-    session_id = f"hyperion-{uuid.uuid4().hex[:8]}"
+    # Generate a new UUID4 session ID
+    session_id = str(uuid.uuid4())
     SESSION_FILE.write_text(session_id)
     log.info(f"Created new session ID: {session_id}")
     return session_id

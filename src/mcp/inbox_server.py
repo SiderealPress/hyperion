@@ -246,7 +246,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="transcribe_audio",
-            description="Transcribe a voice message to text using OpenAI Whisper. Use this for messages with type='voice'.",
+            description="Transcribe a voice message to text using local Whisper (small model). Use this for messages with type='voice'. Runs entirely locally - no cloud API needed.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -369,9 +369,16 @@ async def handle_check_inbox(args: dict) -> list[TextContent]:
         ts = msg.get("timestamp", "")
         msg_id = msg.get("id", msg.get("_filename", ""))
         chat_id = msg.get("chat_id", "")
+        msg_type = msg.get("type", "text")
 
         output += f"---\n"
-        output += f"**[{source}]** from **{user}**\n"
+        # Add voice indicator if it's a voice message
+        if msg_type == "voice":
+            output += f"**[{source}]** 🎤 from **{user}**\n"
+            if not msg.get("transcription"):
+                output += f"⚠️ Voice message needs transcription - use `transcribe_audio`\n"
+        else:
+            output += f"**[{source}]** from **{user}**\n"
         output += f"Chat ID: `{chat_id}` | Message ID: `{msg_id}`\n"
         output += f"Time: {ts}\n\n"
         output += f"> {text}\n\n"
@@ -652,18 +659,51 @@ async def handle_delete_task(args: dict) -> list[TextContent]:
 
 
 # =============================================================================
-# Audio Transcription Handler
+# Audio Transcription Handler (Local Whisper)
 # =============================================================================
 
+# FFmpeg path for audio conversion
+FFMPEG_PATH = Path.home() / ".local" / "bin" / "ffmpeg"
+
+# Whisper model (lazy loaded)
+_whisper_model = None
+
+def get_whisper_model():
+    """Lazy load the whisper model."""
+    global _whisper_model
+    if _whisper_model is None:
+        import whisper
+        _whisper_model = whisper.load_model("small")
+    return _whisper_model
+
+
+async def convert_ogg_to_wav(ogg_path: Path, wav_path: Path) -> bool:
+    """Convert OGG audio to WAV format using FFmpeg."""
+    ffmpeg = str(FFMPEG_PATH) if FFMPEG_PATH.exists() else "ffmpeg"
+    cmd = [
+        ffmpeg, "-i", str(ogg_path),
+        "-ar", "16000",  # 16kHz sample rate
+        "-ac", "1",      # Mono
+        "-y",            # Overwrite
+        str(wav_path)
+    ]
+
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    _, stderr = await proc.communicate()
+
+    return proc.returncode == 0
+
+
 async def handle_transcribe_audio(args: dict) -> list[TextContent]:
-    """Transcribe a voice message using OpenAI Whisper API."""
+    """Transcribe a voice message using local Whisper (small model)."""
     message_id = args.get("message_id", "")
 
     if not message_id:
         return [TextContent(type="text", text="Error: message_id is required.")]
-
-    if not OPENAI_API_KEY:
-        return [TextContent(type="text", text="Error: OPENAI_API_KEY not configured. Set it in config.env.")]
 
     # Find the message file
     msg_file = None
@@ -719,39 +759,43 @@ async def handle_transcribe_audio(args: dict) -> list[TextContent]:
     if not audio_path.exists():
         return [TextContent(type="text", text=f"Error: Audio file not found: {audio_path}")]
 
-    # Call OpenAI Whisper API
+    # Local Whisper transcription
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            with open(audio_path, "rb") as audio_file:
-                response = await client.post(
-                    "https://api.openai.com/v1/audio/transcriptions",
-                    headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
-                    files={"file": (audio_path.name, audio_file, "audio/ogg")},
-                    data={"model": "whisper-1"},
-                )
+        # Convert OGG to WAV if needed
+        if audio_path.suffix.lower() in [".ogg", ".oga", ".opus"]:
+            wav_path = audio_path.with_suffix(".wav")
+            if not wav_path.exists():
+                success = await convert_ogg_to_wav(audio_path, wav_path)
+                if not success:
+                    return [TextContent(type="text", text="Error: Failed to convert audio to WAV format.")]
+            transcribe_path = wav_path
+        else:
+            transcribe_path = audio_path
 
-            if response.status_code != 200:
-                error_msg = response.text
-                return [TextContent(type="text", text=f"Error from Whisper API: {error_msg}")]
+        # Run transcription in thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
 
-            result = response.json()
-            transcription = result.get("text", "")
+        def do_transcription():
+            model = get_whisper_model()
+            result = model.transcribe(str(transcribe_path), language="en")
+            return result["text"].strip()
 
-            if not transcription:
-                return [TextContent(type="text", text="Error: Empty transcription returned.")]
+        transcription = await loop.run_in_executor(None, do_transcription)
 
-            # Update the message file with transcription
-            msg_data["transcription"] = transcription
-            msg_data["text"] = transcription  # Replace placeholder text
-            msg_data["transcribed_at"] = datetime.now(timezone.utc).isoformat()
+        if not transcription:
+            return [TextContent(type="text", text="Error: Empty transcription returned.")]
 
-            with open(msg_file, "w") as fp:
-                json.dump(msg_data, fp, indent=2)
+        # Update the message file with transcription
+        msg_data["transcription"] = transcription
+        msg_data["text"] = transcription  # Replace placeholder text
+        msg_data["transcribed_at"] = datetime.now(timezone.utc).isoformat()
+        msg_data["transcription_model"] = "whisper-small-local"
 
-            return [TextContent(type="text", text=f"🎤 **Transcription complete:**\n\n{transcription}")]
+        with open(msg_file, "w") as fp:
+            json.dump(msg_data, fp, indent=2)
 
-    except httpx.TimeoutException:
-        return [TextContent(type="text", text="Error: Transcription request timed out.")]
+        return [TextContent(type="text", text=f"🎤 **Transcription complete (local whisper-small):**\n\n{transcription}")]
+
     except Exception as e:
         return [TextContent(type="text", text=f"Error during transcription: {str(e)}")]
 

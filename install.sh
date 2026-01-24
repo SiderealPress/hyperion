@@ -295,9 +295,12 @@ if [ "$NEED_CONFIG" = true ]; then
     echo "  2. Send /newbot and follow the prompts"
     echo "  3. Copy the token (looks like: 123456789:ABCdefGHI...)"
     echo ""
-    echo "To get your user ID:"
+    echo "To get your numeric user ID (NOT your @username):"
     echo "  1. Message @userinfobot on Telegram"
-    echo "  2. It will reply with your user ID (a number)"
+    echo "  2. It will reply with your numeric ID (e.g. 123456789)"
+    echo ""
+    echo -e "  ${YELLOW}Important: Your user ID is a number like 123456789${NC}"
+    echo -e "  ${YELLOW}           It is NOT your @username${NC}"
     echo ""
 
     # Get bot token
@@ -312,11 +315,14 @@ if [ "$NEED_CONFIG" = true ]; then
 
     # Get user ID
     while true; do
-        read -p "Enter your Telegram user ID: " USER_ID
+        read -p "Enter your Telegram numeric user ID: " USER_ID
         if [[ "$USER_ID" =~ ^[0-9]+$ ]]; then
             break
+        elif [[ "$USER_ID" =~ ^@ ]]; then
+            warn "That's your @username. You need your numeric ID."
+            echo "    Message @userinfobot on Telegram to get it."
         else
-            warn "Invalid user ID. Should be a number like: 123456789"
+            warn "Invalid user ID. Must be a number like: 123456789"
         fi
     done
 

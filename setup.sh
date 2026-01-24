@@ -642,19 +642,31 @@ print_step "Configuring UFW firewall..."
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow ssh
-sudo ufw --force enable
+if sudo ufw --force enable; then
+    print_success "UFW firewall enabled"
+else
+    print_warning "UFW failed to enable (normal in containers/VMs without iptables)"
+fi
 
 print_step "Enabling fail2ban..."
-sudo systemctl enable fail2ban
-sudo systemctl start fail2ban
+if sudo systemctl enable fail2ban 2>/dev/null && sudo systemctl start fail2ban 2>/dev/null; then
+    print_success "fail2ban enabled"
+else
+    print_warning "fail2ban not started (systemd may not be running)"
+fi
 
 print_step "Hardening SSH configuration..."
-sudo tee /etc/ssh/sshd_config.d/hardening.conf > /dev/null << 'EOF'
+if [ -d /etc/ssh/sshd_config.d ]; then
+    sudo tee /etc/ssh/sshd_config.d/hardening.conf > /dev/null << 'EOF'
 PermitRootLogin no
 MaxAuthTries 3
 ClientAliveInterval 300
 ClientAliveCountMax 2
 EOF
+    print_success "SSH hardening applied"
+else
+    print_warning "SSH config directory not found (SSH server not installed)"
+fi
 print_success "Security hardening complete"
 
 #-------------------------------------------------------------------------------

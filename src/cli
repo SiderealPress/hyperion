@@ -1,0 +1,297 @@
+#!/bin/bash
+#===============================================================================
+# Hyperion CLI - Unified control for Hyperion message processing system
+#
+# Usage: hyperion <command> [options]
+#
+# Commands:
+#   start       Start all Hyperion services
+#   stop        Stop all Hyperion services
+#   restart     Restart all Hyperion services
+#   status      Show status of all components
+#   logs        Show logs (follow mode)
+#   inbox       Check inbox for pending messages
+#   outbox      Check outbox for pending replies
+#   stats       Show message statistics
+#   test        Send a test message through the system
+#   help        Show this help message
+#===============================================================================
+
+set -e
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# Directories
+INBOX_DIR="$HOME/messages/inbox"
+OUTBOX_DIR="$HOME/messages/outbox"
+PROCESSED_DIR="$HOME/messages/processed"
+
+# Services
+SERVICES=("hyperion-router" "hyperion-daemon")
+
+#-------------------------------------------------------------------------------
+# Helper Functions
+#-------------------------------------------------------------------------------
+
+print_header() {
+    echo -e "${BLUE}╔═══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${BLUE}║  $1$(printf '%*s' $((53 - ${#1})) '')║${NC}"
+    echo -e "${BLUE}╚═══════════════════════════════════════════════════════════════╝${NC}"
+}
+
+service_status() {
+    local service=$1
+    if systemctl is-active --quiet "$service" 2>/dev/null; then
+        echo -e "${GREEN}●${NC} $service: ${GREEN}running${NC}"
+        return 0
+    else
+        echo -e "${RED}○${NC} $service: ${RED}stopped${NC}"
+        return 1
+    fi
+}
+
+count_files() {
+    local dir=$1
+    find "$dir" -name "*.json" -type f 2>/dev/null | wc -l
+}
+
+#-------------------------------------------------------------------------------
+# Commands
+#-------------------------------------------------------------------------------
+
+cmd_start() {
+    print_header "Starting Hyperion"
+
+    for service in "${SERVICES[@]}"; do
+        echo -n "Starting $service... "
+        if sudo systemctl start "$service" 2>/dev/null; then
+            echo -e "${GREEN}OK${NC}"
+        else
+            echo -e "${RED}FAILED${NC}"
+        fi
+    done
+
+    sleep 2
+    echo ""
+    cmd_status
+}
+
+cmd_stop() {
+    print_header "Stopping Hyperion"
+
+    for service in "${SERVICES[@]}"; do
+        echo -n "Stopping $service... "
+        if sudo systemctl stop "$service" 2>/dev/null; then
+            echo -e "${GREEN}OK${NC}"
+        else
+            echo -e "${YELLOW}not running${NC}"
+        fi
+    done
+}
+
+cmd_restart() {
+    print_header "Restarting Hyperion"
+    cmd_stop
+    sleep 1
+    cmd_start
+}
+
+cmd_status() {
+    print_header "Hyperion Status"
+
+    echo ""
+    echo -e "${CYAN}Services:${NC}"
+    local all_running=true
+    for service in "${SERVICES[@]}"; do
+        if ! service_status "$service"; then
+            all_running=false
+        fi
+    done
+
+    echo ""
+    echo -e "${CYAN}Message Queues:${NC}"
+    local inbox_count=$(count_files "$INBOX_DIR")
+    local outbox_count=$(count_files "$OUTBOX_DIR")
+    local processed_count=$(count_files "$PROCESSED_DIR")
+
+    echo "  Inbox:     $inbox_count pending"
+    echo "  Outbox:    $outbox_count queued"
+    echo "  Processed: $processed_count total"
+
+    echo ""
+    echo -e "${CYAN}MCP Servers:${NC}"
+    claude mcp list 2>/dev/null | grep -E "hyperion|telegram" | sed 's/^/  /' || echo "  (run 'claude mcp list' to check)"
+
+    echo ""
+    if $all_running; then
+        echo -e "${GREEN}✓ Hyperion is operational${NC}"
+    else
+        echo -e "${YELLOW}⚠ Some services are not running${NC}"
+    fi
+}
+
+cmd_logs() {
+    local service="${1:-all}"
+
+    print_header "Hyperion Logs"
+
+    if [ "$service" = "all" ]; then
+        echo "Showing logs for all services (Ctrl+C to exit)..."
+        echo ""
+        sudo journalctl -u hyperion-router -u hyperion-daemon -f --no-pager
+    elif [ "$service" = "bot" ] || [ "$service" = "router" ]; then
+        sudo journalctl -u hyperion-router -f --no-pager
+    elif [ "$service" = "daemon" ] || [ "$service" = "claude" ]; then
+        sudo journalctl -u hyperion-daemon -f --no-pager
+    else
+        echo "Unknown service: $service"
+        echo "Usage: hyperion logs [all|bot|daemon]"
+    fi
+}
+
+cmd_inbox() {
+    print_header "Inbox"
+
+    local count=$(count_files "$INBOX_DIR")
+
+    if [ "$count" -eq 0 ]; then
+        echo -e "${GREEN}📭 Inbox is empty${NC}"
+    else
+        echo -e "${YELLOW}📬 $count message(s) pending:${NC}"
+        echo ""
+        for f in "$INBOX_DIR"/*.json; do
+            if [ -f "$f" ]; then
+                local source=$(jq -r '.source // "unknown"' "$f" 2>/dev/null)
+                local user=$(jq -r '.user_name // .username // "unknown"' "$f" 2>/dev/null)
+                local text=$(jq -r '.text // "(no text)"' "$f" 2>/dev/null | head -c 60)
+                local ts=$(jq -r '.timestamp // ""' "$f" 2>/dev/null | cut -d'T' -f2 | cut -d'.' -f1)
+                echo -e "  ${CYAN}[$source]${NC} $user ($ts): $text"
+            fi
+        done
+    fi
+}
+
+cmd_outbox() {
+    print_header "Outbox"
+
+    local count=$(count_files "$OUTBOX_DIR")
+
+    if [ "$count" -eq 0 ]; then
+        echo -e "${GREEN}📤 Outbox is empty${NC}"
+    else
+        echo -e "${YELLOW}📤 $count reply(s) queued:${NC}"
+        echo ""
+        for f in "$OUTBOX_DIR"/*.json; do
+            if [ -f "$f" ]; then
+                local source=$(jq -r '.source // "unknown"' "$f" 2>/dev/null)
+                local chat_id=$(jq -r '.chat_id // "?"' "$f" 2>/dev/null)
+                local text=$(jq -r '.text // "(no text)"' "$f" 2>/dev/null | head -c 60)
+                echo -e "  ${CYAN}[$source]${NC} → $chat_id: $text"
+            fi
+        done
+    fi
+}
+
+cmd_stats() {
+    print_header "Message Statistics"
+
+    echo ""
+    echo -e "${CYAN}Counts:${NC}"
+    echo "  Inbox:     $(count_files "$INBOX_DIR") pending"
+    echo "  Outbox:    $(count_files "$OUTBOX_DIR") queued"
+    echo "  Processed: $(count_files "$PROCESSED_DIR") total"
+
+    echo ""
+    echo -e "${CYAN}By Source (processed):${NC}"
+    if [ -d "$PROCESSED_DIR" ]; then
+        for f in "$PROCESSED_DIR"/*.json; do
+            [ -f "$f" ] && jq -r '.source // "unknown"' "$f" 2>/dev/null
+        done | sort | uniq -c | sed 's/^/  /'
+    else
+        echo "  (no data)"
+    fi
+
+    echo ""
+    echo -e "${CYAN}Recent Activity:${NC}"
+    sudo journalctl -u hyperion-daemon --since "1 hour ago" --no-pager 2>/dev/null | \
+        grep -E "message|processed|reply" | tail -5 | sed 's/^/  /' || echo "  (no recent activity)"
+}
+
+cmd_test() {
+    print_header "Test Message"
+
+    echo "Creating test message in inbox..."
+
+    local msg_id="test_$(date +%s)"
+    local msg_file="$INBOX_DIR/${msg_id}.json"
+
+    cat > "$msg_file" << EOF
+{
+  "id": "$msg_id",
+  "source": "test",
+  "chat_id": 0,
+  "user_id": 0,
+  "username": "test_user",
+  "user_name": "Test",
+  "text": "This is a test message. Please acknowledge.",
+  "timestamp": "$(date -Iseconds)"
+}
+EOF
+
+    echo -e "${GREEN}✓ Test message created: $msg_file${NC}"
+    echo ""
+    echo "If the daemon is running, it should process this shortly."
+    echo "Watch with: hyperion logs daemon"
+}
+
+cmd_help() {
+    echo -e "${BLUE}Hyperion CLI${NC} - Unified control for Hyperion message processing"
+    echo ""
+    echo "Usage: hyperion <command> [options]"
+    echo ""
+    echo "Commands:"
+    echo "  start           Start all Hyperion services"
+    echo "  stop            Stop all Hyperion services"
+    echo "  restart         Restart all Hyperion services"
+    echo "  status          Show status of all components"
+    echo "  logs [service]  Show logs (all|bot|daemon)"
+    echo "  inbox           Check inbox for pending messages"
+    echo "  outbox          Check outbox for pending replies"
+    echo "  stats           Show message statistics"
+    echo "  test            Create a test message in inbox"
+    echo "  help            Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  hyperion start          # Start everything"
+    echo "  hyperion status         # Check what's running"
+    echo "  hyperion logs daemon    # Watch Claude daemon logs"
+    echo "  hyperion inbox          # See pending messages"
+}
+
+#-------------------------------------------------------------------------------
+# Main
+#-------------------------------------------------------------------------------
+
+case "${1:-help}" in
+    start)   cmd_start ;;
+    stop)    cmd_stop ;;
+    restart) cmd_restart ;;
+    status)  cmd_status ;;
+    logs)    cmd_logs "$2" ;;
+    inbox)   cmd_inbox ;;
+    outbox)  cmd_outbox ;;
+    stats)   cmd_stats ;;
+    test)    cmd_test ;;
+    help|--help|-h) cmd_help ;;
+    *)
+        echo "Unknown command: $1"
+        echo "Run 'hyperion help' for usage."
+        exit 1
+        ;;
+esac

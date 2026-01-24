@@ -91,7 +91,7 @@ if [ ! -t 0 ]; then
 fi
 
 # Check sudo
-if ! sudo -v; then
+if ! sudo true 2>/dev/null; then
     error "This script requires sudo access"
     exit 1
 fi

@@ -34,10 +34,12 @@ if not ALLOWED_USERS:
 
 INBOX_DIR = Path.home() / "messages" / "inbox"
 OUTBOX_DIR = Path.home() / "messages" / "outbox"
+AUDIO_DIR = Path.home() / "messages" / "audio"
 
 # Ensure directories exist
 INBOX_DIR.mkdir(parents=True, exist_ok=True)
 OUTBOX_DIR.mkdir(parents=True, exist_ok=True)
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 # Logging
 LOG_DIR = Path.home() / "hyperion-workspace" / "logs"
@@ -117,12 +119,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         log.warning(f"Unauthorized: {user.id}")
         return
 
+    msg_id = f"{int(time.time() * 1000)}_{message.message_id}"
+
+    # Handle voice messages
+    if message.voice:
+        await handle_voice_message(update, context, msg_id)
+        return
+
     text = message.text
     if not text:
         return
 
     # Create message file in inbox
-    msg_id = f"{int(time.time() * 1000)}_{message.message_id}"
     msg_data = {
         "id": msg_id,
         "source": "telegram",
@@ -142,6 +150,50 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Send acknowledgment
     await message.reply_text("📨 Message received. Processing...")
+
+
+async def handle_voice_message(update: Update, context: ContextTypes.DEFAULT_TYPE, msg_id: str):
+    """Handle voice messages: download audio and save to inbox with metadata."""
+    user = update.effective_user
+    message = update.message
+    voice = message.voice
+
+    try:
+        # Download voice file from Telegram
+        file = await context.bot.get_file(voice.file_id)
+        audio_filename = f"{msg_id}.ogg"
+        audio_path = AUDIO_DIR / audio_filename
+
+        await file.download_to_drive(audio_path)
+        log.info(f"Downloaded voice message to: {audio_path}")
+
+        # Create message file in inbox with voice metadata
+        msg_data = {
+            "id": msg_id,
+            "source": "telegram",
+            "type": "voice",
+            "chat_id": message.chat_id,
+            "user_id": user.id,
+            "username": user.username,
+            "user_name": user.first_name,
+            "text": "[Voice message - pending transcription]",
+            "audio_file": str(audio_path),
+            "audio_duration": voice.duration,
+            "audio_mime_type": voice.mime_type or "audio/ogg",
+            "file_id": voice.file_id,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        inbox_file = INBOX_DIR / f"{msg_id}.json"
+        with open(inbox_file, 'w') as f:
+            json.dump(msg_data, f, indent=2)
+
+        log.info(f"Wrote voice message to inbox: {msg_id}")
+        await message.reply_text("🎤 Voice message received. Transcribing...")
+
+    except Exception as e:
+        log.error(f"Error handling voice message: {e}")
+        await message.reply_text("❌ Failed to process voice message.")
 
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -170,6 +222,7 @@ async def run_bot():
     # Add handlers
     bot_app.add_handler(CommandHandler("start", start_command))
     bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    bot_app.add_handler(MessageHandler(filters.VOICE, handle_message))
     bot_app.add_error_handler(error_handler)
 
     # Initialize and start

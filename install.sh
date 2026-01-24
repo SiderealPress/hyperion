@@ -2,7 +2,7 @@
 #===============================================================================
 # Hyperion Bootstrap Installer
 #
-# Usage: curl -fsSL https://raw.githubusercontent.com/SiderealPress/hyperion/main/install.sh | bash
+# Usage: bash <(curl -fsSL https://raw.githubusercontent.com/SiderealPress/hyperion/main/install.sh)
 #
 # This script sets up a complete Hyperion installation on a fresh VM:
 # - Installs system dependencies
@@ -77,8 +77,21 @@ else
     warn "Cannot detect OS. Proceeding anyway..."
 fi
 
+# Check if running interactively
+if [ ! -t 0 ]; then
+    error "This script requires interactive input."
+    echo ""
+    echo "Please run it like this instead:"
+    echo -e "  ${CYAN}bash <(curl -fsSL https://raw.githubusercontent.com/SiderealPress/hyperion/main/install.sh)${NC}"
+    echo ""
+    echo "Or download and run:"
+    echo -e "  ${CYAN}curl -fsSL https://raw.githubusercontent.com/SiderealPress/hyperion/main/install.sh -o install.sh${NC}"
+    echo -e "  ${CYAN}bash install.sh${NC}"
+    exit 1
+fi
+
 # Check sudo
-if ! sudo -v 2>/dev/null; then
+if ! sudo -v; then
     error "This script requires sudo access"
     exit 1
 fi

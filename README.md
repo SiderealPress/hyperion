@@ -5,7 +5,7 @@ Always-on Claude Code message processor with Telegram integration.
 ## One-Line Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SiderealPress/hyperion/main/install.sh | bash
+bash <(curl -fsSL https://raw.githubusercontent.com/SiderealPress/hyperion/main/install.sh)
 ```
 
 ## Overview

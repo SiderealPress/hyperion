@@ -676,9 +676,21 @@ fi
 print_success "Security hardening complete"
 
 #-------------------------------------------------------------------------------
+# Projects Directory Structure
+#-------------------------------------------------------------------------------
+print_header "Step 8: Creating Projects Directory Structure"
+
+print_step "Creating ~/projects directory tree..."
+mkdir -p ~/projects/personal
+mkdir -p ~/projects/business
+print_success "Projects directories created:"
+echo "  ~/projects/personal - Personal projects"
+echo "  ~/projects/business - Business/work projects"
+
+#-------------------------------------------------------------------------------
 # Helper Scripts
 #-------------------------------------------------------------------------------
-print_header "Step 8: Creating Helper Scripts"
+print_header "Step 9: Creating Helper Scripts"
 
 print_step "Creating start-agent.sh..."
 cat > ~/start-agent.sh << 'SCRIPT'
@@ -793,7 +805,7 @@ print_success "Helper scripts created"
 #-------------------------------------------------------------------------------
 # Set Zsh Default
 #-------------------------------------------------------------------------------
-print_header "Step 9: Setting Zsh as Default"
+print_header "Step 10: Setting Zsh as Default"
 
 print_step "Changing default shell to zsh..."
 sudo chsh -s $(which zsh) $(whoami)

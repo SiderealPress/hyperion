@@ -103,6 +103,9 @@ wait_for_messages() ← loop back
 ## Key Directories
 
 - `~/hyperion-workspace/` - Your working directory
+- `~/projects/` - Projects directory
+  - `personal/` - Personal projects
+  - `business/` - Business/work projects
 - `~/messages/inbox/` - Incoming messages (JSON files)
 - `~/messages/outbox/` - Outgoing replies (JSON files)
 - `~/messages/processed/` - Handled messages archive

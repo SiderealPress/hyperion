@@ -138,6 +138,42 @@ Create recurring automated tasks that run on a cron schedule:
 - `check_task_outputs(since?, limit?, job_name?)` - Check job outputs
 - `write_task_output(job_name, output, status?)` - Write job output (used by job instances)
 
+### GitHub Integration
+Access GitHub repositories, issues, PRs, and projects via the GitHub MCP server:
+- Browse and search code across repositories
+- Create, update, and manage issues
+- Review pull requests and add comments
+- Access project boards and manage items
+- Monitor GitHub Actions workflow runs
+
+## GitHub Integration
+
+Hyperion integrates with GitHub via the official GitHub MCP server. This allows directing work through GitHub issues and project boards.
+
+### Setup
+
+During installation, you'll be prompted for a GitHub Personal Access Token. Or configure manually:
+
+```bash
+# Create a PAT at https://github.com/settings/tokens with scopes: repo, read:org, read:project
+
+# Add the GitHub MCP server
+claude mcp add-json github '{"type":"http","url":"https://api.githubcopilot.com/mcp","headers":{"Authorization":"Bearer YOUR_PAT"}}'
+
+# Verify
+claude mcp list
+```
+
+### Usage Examples
+
+```
+User: "Check my GitHub issues"
+Hyperion: Uses mcp__github tools to list and summarize issues
+
+User: "Work on issue #42"
+Hyperion: Reads issue details, implements solution, comments on progress
+```
+
 ## Scheduled Jobs
 
 Create automated tasks that run on a schedule:

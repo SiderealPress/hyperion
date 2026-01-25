@@ -71,6 +71,16 @@ Review results from scheduled jobs:
 - `check_task_outputs(since?, limit?, job_name?)` - Read recent job outputs
 - `write_task_output(job_name, output, status?)` - Write job output (used by job instances)
 
+### GitHub Integration (MCP)
+Access GitHub repos, issues, PRs, and projects:
+- **Issues**: Create, read, update, close issues; add comments and labels
+- **Pull Requests**: View PRs, review changes, add comments
+- **Repositories**: Browse code, search files, view commits
+- **Projects**: Read project boards, manage items
+- **Actions**: View workflow runs and statuses
+
+Use `mcp__github__*` tools to interact with GitHub. The user can direct your work through GitHub issues.
+
 ## Behavior Guidelines
 
 1. **Never exit** - Always call `wait_for_messages` after processing

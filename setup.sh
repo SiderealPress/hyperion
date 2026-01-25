@@ -812,6 +812,69 @@ sudo chsh -s $(which zsh) $(whoami)
 print_success "Default shell set to zsh"
 
 #-------------------------------------------------------------------------------
+# GitHub MCP Server (Optional)
+#-------------------------------------------------------------------------------
+print_header "Step 11: GitHub MCP Server Configuration"
+
+echo -e "${CYAN}The GitHub MCP server allows Hyperion to access your GitHub repos, issues, and PRs.${NC}"
+echo ""
+
+# Check if GITHUB_PAT already exists in config
+GITHUB_PAT=""
+if [ -f "$HOME/hyperion/config/config.env" ]; then
+    GITHUB_PAT=$(grep "^GITHUB_PERSONAL_ACCESS_TOKEN=" "$HOME/hyperion/config/config.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+fi
+
+if [ -n "$GITHUB_PAT" ]; then
+    print_success "GitHub PAT found in config.env"
+    CONFIGURE_GITHUB="y"
+else
+    echo -e "${YELLOW}To enable GitHub integration, you need a Personal Access Token.${NC}"
+    echo "Create one at: https://github.com/settings/tokens"
+    echo "Required scopes: repo, read:org, read:project"
+    echo ""
+    read -p "Do you want to configure GitHub integration now? [y/N] " CONFIGURE_GITHUB
+fi
+
+if [[ "$CONFIGURE_GITHUB" =~ ^[Yy]$ ]]; then
+    if [ -z "$GITHUB_PAT" ]; then
+        echo ""
+        read -sp "Enter your GitHub Personal Access Token: " GITHUB_PAT
+        echo ""
+
+        if [ -n "$GITHUB_PAT" ]; then
+            # Save to config.env
+            mkdir -p "$HOME/hyperion/config"
+            if [ -f "$HOME/hyperion/config/config.env" ]; then
+                # Remove existing GITHUB_PAT line if present
+                grep -v "^GITHUB_PERSONAL_ACCESS_TOKEN=" "$HOME/hyperion/config/config.env" > "$HOME/hyperion/config/config.env.tmp" || true
+                mv "$HOME/hyperion/config/config.env.tmp" "$HOME/hyperion/config/config.env"
+            fi
+            echo "GITHUB_PERSONAL_ACCESS_TOKEN=\"$GITHUB_PAT\"" >> "$HOME/hyperion/config/config.env"
+            print_success "GitHub PAT saved to config.env"
+        fi
+    fi
+
+    if [ -n "$GITHUB_PAT" ]; then
+        print_step "Configuring GitHub MCP server..."
+
+        # Add GitHub MCP server using the remote HTTP method
+        if command -v claude &> /dev/null; then
+            claude mcp add-json github "{\"type\":\"http\",\"url\":\"https://api.githubcopilot.com/mcp\",\"headers\":{\"Authorization\":\"Bearer $GITHUB_PAT\"}}" --scope user 2>/dev/null || true
+            print_success "GitHub MCP server configured"
+            echo "  Tools available: issues, PRs, repos, projects, actions"
+        else
+            print_warning "Claude CLI not found. Configure GitHub MCP manually after setup:"
+            echo "  claude mcp add-json github '{\"type\":\"http\",\"url\":\"https://api.githubcopilot.com/mcp\",\"headers\":{\"Authorization\":\"Bearer YOUR_PAT\"}}'"
+        fi
+    fi
+else
+    print_warning "GitHub integration skipped. You can configure it later:"
+    echo "  1. Create a PAT at https://github.com/settings/tokens"
+    echo "  2. Run: claude mcp add-json github '{\"type\":\"http\",\"url\":\"https://api.githubcopilot.com/mcp\",\"headers\":{\"Authorization\":\"Bearer YOUR_PAT\"}}'"
+fi
+
+#-------------------------------------------------------------------------------
 # Done
 #-------------------------------------------------------------------------------
 print_header "Setup Complete!"

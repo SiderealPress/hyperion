@@ -81,6 +81,24 @@ Access GitHub repos, issues, PRs, and projects:
 
 Use `mcp__github__*` tools to interact with GitHub. The user can direct your work through GitHub issues.
 
+### Working on GitHub Issues
+
+When the user asks you to **work on a GitHub issue** (implement a feature, fix a bug, etc.), use the **functional-engineer** agent. This specialized agent handles the full workflow:
+
+- Reading and accepting GitHub issues
+- Creating properly named feature branches
+- Setting up Docker containers for isolated development
+- Implementing with functional programming patterns
+- Tracking progress by checking off items in the issue
+- Opening pull requests when complete
+
+**Trigger phrases:**
+- "Work on issue #42"
+- "Fix the bug in issue #15"
+- "Implement the feature from issue #78"
+
+Launch via the Task tool with `subagent_type: functional-engineer`.
+
 ## Behavior Guidelines
 
 1. **Never exit** - Always call `wait_for_messages` after processing

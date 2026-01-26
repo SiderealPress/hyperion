@@ -144,6 +144,8 @@ PACKAGES=(
     python3-pip
     python3-venv
     cron
+    expect
+    tmux
 )
 
 for pkg in "${PACKAGES[@]}"; do
@@ -581,30 +583,25 @@ PrivateTmp=true
 WantedBy=multi-user.target
 EOF
 
-# Daemon service
-cat > "$INSTALL_DIR/services/hyperion-daemon.service" << EOF
+# Claude service (tmux-based always-on model)
+cat > "$INSTALL_DIR/services/hyperion-claude.service" << EOF
 [Unit]
-Description=Hyperion Daemon - Always-on Claude Code message processor
+Description=Hyperion Claude - Always-on Claude Code session
 After=network.target hyperion-router.service
 Wants=hyperion-router.service
 
 [Service]
-Type=simple
+Type=forking
 User=$CURRENT_USER
 Group=$CURRENT_GROUP
 WorkingDirectory=$WORKSPACE_DIR
-Environment=PATH=$HOME/.claude/bin:$HOME/.local/bin:$HOME/.cargo/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=$HOME/.claude/bin:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=HOME=$HOME
-ExecStart=/usr/bin/python3 $INSTALL_DIR/src/daemon/daemon.py
-Restart=always
+ExecStart=/usr/bin/tmux -L hyperion new-session -d -s hyperion -c $WORKSPACE_DIR $INSTALL_DIR/scripts/claude-wrapper.exp
+ExecStop=/usr/bin/tmux -L hyperion kill-session -t hyperion
+RemainAfterExit=yes
+Restart=on-failure
 RestartSec=10
-
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=hyperion-daemon
-
-NoNewPrivileges=true
-PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target
@@ -619,7 +616,7 @@ success "Service files generated"
 step "Installing systemd services..."
 
 sudo cp "$INSTALL_DIR/services/hyperion-router.service" /etc/systemd/system/
-sudo cp "$INSTALL_DIR/services/hyperion-daemon.service" /etc/systemd/system/
+sudo cp "$INSTALL_DIR/services/hyperion-claude.service" /etc/systemd/system/
 sudo systemctl daemon-reload
 
 success "Services installed"
@@ -717,12 +714,12 @@ read -p "Start Hyperion services now? [Y/n] " -n 1 -r
 echo
 
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-    sudo systemctl enable hyperion-router hyperion-daemon
+    sudo systemctl enable hyperion-router hyperion-claude
     sudo systemctl start hyperion-router
     sleep 2
-    sudo systemctl start hyperion-daemon
+    sudo systemctl start hyperion-claude
 
-    sleep 2
+    sleep 3
 
     echo ""
     if systemctl is-active --quiet hyperion-router; then
@@ -731,10 +728,10 @@ if [[ ! $REPLY =~ ^[Nn]$ ]]; then
         warn "Telegram bot: not running (check logs)"
     fi
 
-    if systemctl is-active --quiet hyperion-daemon; then
-        success "Claude daemon: running"
+    if tmux -L hyperion has-session -t hyperion 2>/dev/null; then
+        success "Claude session: running in tmux"
     else
-        info "Claude daemon: not running (optional)"
+        warn "Claude session: not running (check with: hyperion attach)"
     fi
 else
     info "Services not started. Start manually with: hyperion start"

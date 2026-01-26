@@ -9,6 +9,7 @@
 #   stop        Stop all Hyperion services
 #   restart     Restart all Hyperion services
 #   status      Show status of all components
+#   attach      Attach to Claude tmux session
 #   logs        Show logs (follow mode)
 #   inbox       Check inbox for pending messages
 #   outbox      Check outbox for pending replies
@@ -34,7 +35,7 @@ OUTBOX_DIR="$HOME/messages/outbox"
 PROCESSED_DIR="$HOME/messages/processed"
 
 # Services
-SERVICES=("hyperion-router" "hyperion-daemon")
+SERVICES=("hyperion-router" "hyperion-claude")
 
 #-------------------------------------------------------------------------------
 # Helper Functions
@@ -145,14 +146,31 @@ cmd_logs() {
     if [ "$service" = "all" ]; then
         echo "Showing logs for all services (Ctrl+C to exit)..."
         echo ""
-        sudo journalctl -u hyperion-router -u hyperion-daemon -f --no-pager
+        sudo journalctl -u hyperion-router -u hyperion-claude -f --no-pager
     elif [ "$service" = "bot" ] || [ "$service" = "router" ]; then
         sudo journalctl -u hyperion-router -f --no-pager
-    elif [ "$service" = "daemon" ] || [ "$service" = "claude" ]; then
-        sudo journalctl -u hyperion-daemon -f --no-pager
+    elif [ "$service" = "claude" ]; then
+        echo "Claude runs in tmux. Use 'hyperion attach' to view live session."
+        echo "Showing systemd logs for hyperion-claude service..."
+        echo ""
+        sudo journalctl -u hyperion-claude -f --no-pager
     else
         echo "Unknown service: $service"
-        echo "Usage: hyperion logs [all|bot|daemon]"
+        echo "Usage: hyperion logs [all|bot|claude]"
+    fi
+}
+
+cmd_attach() {
+    print_header "Attaching to Claude Session"
+
+    if tmux -L hyperion has-session -t hyperion 2>/dev/null; then
+        echo "Attaching to hyperion tmux session..."
+        echo "Press Ctrl+B, D to detach without stopping Claude."
+        echo ""
+        tmux -L hyperion attach-session -t hyperion
+    else
+        echo -e "${RED}No active Claude session found.${NC}"
+        echo "Start Hyperion with: hyperion start"
     fi
 }
 
@@ -220,7 +238,7 @@ cmd_stats() {
 
     echo ""
     echo -e "${CYAN}Recent Activity:${NC}"
-    sudo journalctl -u hyperion-daemon --since "1 hour ago" --no-pager 2>/dev/null | \
+    sudo journalctl -u hyperion-claude --since "1 hour ago" --no-pager 2>/dev/null | \
         grep -E "message|processed|reply" | tail -5 | sed 's/^/  /' || echo "  (no recent activity)"
 }
 
@@ -247,8 +265,8 @@ EOF
 
     echo -e "${GREEN}✓ Test message created: $msg_file${NC}"
     echo ""
-    echo "If the daemon is running, it should process this shortly."
-    echo "Watch with: hyperion logs daemon"
+    echo "If Claude is running, it should process this shortly."
+    echo "Watch with: hyperion attach"
 }
 
 cmd_update() {
@@ -274,7 +292,8 @@ cmd_help() {
     echo "  stop            Stop all Hyperion services"
     echo "  restart         Restart all Hyperion services"
     echo "  status          Show status of all components"
-    echo "  logs [service]  Show logs (all|bot|daemon)"
+    echo "  attach          Attach to Claude tmux session"
+    echo "  logs [service]  Show logs (all|bot|claude)"
     echo "  inbox           Check inbox for pending messages"
     echo "  outbox          Check outbox for pending replies"
     echo "  stats           Show message statistics"
@@ -292,7 +311,7 @@ cmd_help() {
     echo "Examples:"
     echo "  hyperion start          # Start everything"
     echo "  hyperion status         # Check what's running"
-    echo "  hyperion logs daemon    # Watch Claude daemon logs"
+    echo "  hyperion attach         # View Claude live session"
     echo "  hyperion inbox          # See pending messages"
 }
 
@@ -305,6 +324,7 @@ case "${1:-help}" in
     stop)    cmd_stop ;;
     restart) cmd_restart ;;
     status)  cmd_status ;;
+    attach)  cmd_attach ;;
     logs)    cmd_logs "$2" ;;
     inbox)   cmd_inbox ;;
     outbox)  cmd_outbox ;;

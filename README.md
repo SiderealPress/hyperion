@@ -21,8 +21,9 @@ Hyperion transforms a server into an always-on Claude Code hub that:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    HYPERION DAEMON                          │
-│         (Always-on Claude Code with Max subscription)       │
+│                ALWAYS-ON CLAUDE (tmux)                      │
+│         Long-running Claude Code session in tmux            │
+│         Blocks on wait_for_messages() - infinite loop       │
 │                                                             │
 │   MCP Server: hyperion-inbox                                │
 │   - Message queue management                                │
@@ -33,7 +34,7 @@ Hyperion transforms a server into an always-on Claude Code hub that:
                ~/messages/inbox/ ←→ ~/messages/outbox/
                               ↑↓
 ┌─────────────────────────────────────────────────────────────┐
-│              TELEGRAM BOT                                   │
+│              TELEGRAM BOT (hyperion-router)                 │
 │   Writes incoming messages to inbox                         │
 │   Watches outbox and sends replies                          │
 └─────────────────────────────────────────────────────────────┘
@@ -68,6 +69,7 @@ hyperion start      # Start all services
 hyperion stop       # Stop all services
 hyperion restart    # Restart services
 hyperion status     # Show status
+hyperion attach     # Attach to Claude tmux session
 hyperion logs       # Show logs (follow mode)
 hyperion inbox      # Check pending messages
 hyperion outbox     # Check pending replies
@@ -82,9 +84,10 @@ hyperion help       # Show help
 ~/hyperion/                    # Repository
 ├── src/
 │   ├── bot/hyperion_bot.py    # Telegram bot
-│   ├── daemon/daemon.py       # Claude daemon
 │   ├── mcp/inbox_server.py    # MCP server
 │   └── cli                    # CLI tool
+├── scripts/
+│   └── claude-wrapper.exp     # Expect script for Claude startup
 ├── scheduled-tasks/           # Scheduled jobs system
 │   ├── jobs.json              # Job registry
 │   ├── tasks/                 # Task markdown files
@@ -238,14 +241,16 @@ bash models/download-ggml-model.sh small
 
 | Service | Description |
 |---------|-------------|
-| `hyperion-router` | Telegram bot |
-| `hyperion-daemon` | Claude Code processor |
+| `hyperion-router` | Telegram bot (writes to inbox, sends from outbox) |
+| `hyperion-claude` | Claude Code session (runs in tmux) |
 | `cron` | Scheduled task executor |
 
 Manual control:
 ```bash
 sudo systemctl status hyperion-router
-sudo journalctl -u hyperion-router -f
+sudo systemctl status hyperion-claude
+tmux -L hyperion list-sessions          # Check tmux session
+hyperion attach                          # Attach to Claude session
 ```
 
 ## Security

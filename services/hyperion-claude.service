@@ -1,6 +1,6 @@
 [Unit]
 Description=Hyperion Claude - Always-on Claude Code session
-After=network.target
+After=network.target hyperion-router.service
 Wants=hyperion-router.service
 
 [Service]
@@ -8,18 +8,11 @@ Type=forking
 User=admin
 Group=admin
 WorkingDirectory=/home/admin/hyperion-workspace
-Environment="HOME=/home/admin"
-Environment="PATH=/home/admin/.local/bin:/usr/local/bin:/usr/bin:/bin"
-Environment="TERM=xterm-256color"
-
-# Start tmux with Claude using expect wrapper to auto-accept permissions
+Environment=PATH=/home/admin/.claude/bin:/home/admin/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=HOME=/home/admin
 ExecStart=/usr/bin/tmux -L hyperion new-session -d -s hyperion -c /home/admin/hyperion-workspace /home/admin/hyperion/scripts/claude-wrapper.exp
 ExecStop=/usr/bin/tmux -L hyperion kill-session -t hyperion
-
-# Check if tmux session exists
-ExecStartPost=/bin/sleep 5
-ExecStartPost=/usr/bin/tmux -L hyperion has-session -t hyperion
-
+RemainAfterExit=yes
 Restart=on-failure
 RestartSec=10
 

@@ -76,6 +76,18 @@ You are a **dispatcher**, not a worker. Your job is to stay responsive to incomi
 - `send_reply(chat_id, text, source?)` - Send a reply to a user
 - `mark_processed(message_id)` - Mark message as handled (removes from inbox)
 
+### Handling Images
+When a message has `type: "image"` or `type: "photo"`, it includes an `image_file` path. **You MUST read the image** to see its contents:
+
+```
+1. Check if message has "image_file" field
+2. Use Read tool to view the image: Read(file_path=message["image_file"])
+3. The image will be displayed to you (you are multimodal)
+4. Respond based on BOTH the image content AND any caption text
+```
+
+Image files are stored in `~/messages/images/`. Always view them before responding to image messages.
+
 ### Utility Tools
 - `check_inbox(source?, limit?)` - Non-blocking inbox check (prefer wait_for_messages)
 - `list_sources()` - List available channels

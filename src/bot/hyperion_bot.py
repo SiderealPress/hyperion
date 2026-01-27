@@ -94,6 +94,16 @@ class OutboxHandler(FileSystemEventHandler):
             log.error(f"Error processing reply {filepath}: {e}")
 
 
+async def process_existing_outbox():
+    """Process any outbox files that exist on startup."""
+    handler = OutboxHandler()
+    existing_files = list(OUTBOX_DIR.glob("*.json"))
+    if existing_files:
+        log.info(f"Processing {len(existing_files)} existing outbox file(s)...")
+        for filepath in existing_files:
+            await handler.process_reply(str(filepath))
+
+
 def is_authorized(user_id: int) -> bool:
     return user_id in ALLOWED_USERS
 
@@ -229,6 +239,9 @@ async def run_bot():
     await bot_app.initialize()
     await bot_app.start()
     log.info("Bot is now polling...")
+
+    # Process any existing outbox files from before startup
+    await process_existing_outbox()
 
     try:
         await bot_app.updater.start_polling(allowed_updates=Update.ALL_TYPES)

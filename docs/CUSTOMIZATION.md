@@ -136,6 +136,9 @@ The main configuration file containing your credentials and settings.
 
 ```bash
 # Hyperion Configuration
+# WARNING: This file contains secrets. Never share or commit to public repos.
+# Ensure file permissions are restrictive: chmod 600 config.env
+#
 # Required for basic operation
 
 # Telegram Bot (from @BotFather)

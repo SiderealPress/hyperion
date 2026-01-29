@@ -1,6 +1,7 @@
 [Unit]
 Description=Hyperion Claude - Always-on Claude Code session
-After=network.target
+After=network.target hyperion-router.service
+Wants=hyperion-router.service
 
 [Service]
 Type=forking

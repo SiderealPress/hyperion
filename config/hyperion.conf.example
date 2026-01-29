@@ -13,11 +13,12 @@
 
 # System user that will run Hyperion services
 # Defaults to current user if not specified
-HYPERION_USER="${HYPERION_USER:-${USER}}"
+# Note: Uses whoami as fallback for non-interactive contexts (systemd, cron)
+HYPERION_USER="${HYPERION_USER:-${USER:-$(whoami)}}"
 
 # System group for Hyperion services
 # Defaults to current user's primary group if not specified
-HYPERION_GROUP="${HYPERION_GROUP:-${USER}}"
+HYPERION_GROUP="${HYPERION_GROUP:-${USER:-$(whoami)}}"
 
 # User home directory
 # Used as base path for other directories if not explicitly set
@@ -66,6 +67,10 @@ HYPERION_BRANCH="${HYPERION_BRANCH:-main}"
 #   ├── agents/             # Custom agent definitions
 #   └── hooks/              # Custom installation hooks
 #
+# IMPORTANT: Your config directory should have restricted permissions:
+#   chmod 700 ~/hyperion-config
+#   chmod 600 ~/hyperion-config/config.env
+#
 # HYPERION_CONFIG_DIR="${HYPERION_HOME}/hyperion-config"
 
 #===============================================================================
@@ -78,4 +83,5 @@ HYPERION_ENABLE_SCHEDULED_TASKS="${HYPERION_ENABLE_SCHEDULED_TASKS:-true}"
 
 # Enable voice message transcription
 # When true, whisper.cpp will be installed for local audio transcription
+# Note: Requires ~400MB disk space and build tools (make, cmake, gcc)
 HYPERION_ENABLE_VOICE="${HYPERION_ENABLE_VOICE:-true}"

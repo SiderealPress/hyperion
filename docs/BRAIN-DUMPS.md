@@ -148,6 +148,49 @@ Issues can be:
 | `HYPERION_BRAIN_DUMPS_ENABLED` | `true` | Enable/disable the feature |
 | `HYPERION_BRAIN_DUMPS_REPO` | `brain-dumps` | Repository name |
 
+These variables are set in `config/hyperion.conf` or `config/hyperion.conf.example`.
+
+## Customization via Private Config Overlay
+
+The brain-dumps agent can be customized using Hyperion's [private config overlay system](CUSTOMIZATION.md).
+
+### Overriding the Agent Definition
+
+To customize the brain-dumps agent behavior, create your own version in your private config directory:
+
+```bash
+# Create custom agent in your private config
+cp ~/hyperion/.claude/agents/brain-dumps.md ~/hyperion-config/agents/brain-dumps.md
+
+# Edit to your preferences
+nano ~/hyperion-config/agents/brain-dumps.md
+```
+
+When the installer runs, your custom `agents/brain-dumps.md` will be copied to `~/hyperion/.claude/agents/`, overriding the default.
+
+### Customization Ideas
+
+You can modify the agent to:
+
+- **Change topic detection labels**: Add labels specific to your work (e.g., `client-a`, `project-x`)
+- **Modify the issue template**: Add custom sections or formatting
+- **Adjust classification criteria**: Be more or less strict about what counts as a brain dump
+- **Add integrations**: Post to Slack, create tasks, etc.
+
+### Disabling Brain Dumps
+
+To disable the feature entirely, set in your `hyperion.conf`:
+
+```bash
+HYPERION_BRAIN_DUMPS_ENABLED=false
+```
+
+Or simply remove/rename the agent file:
+
+```bash
+mv ~/hyperion-config/agents/brain-dumps.md ~/hyperion-config/agents/brain-dumps.md.disabled
+```
+
 ## Privacy
 
 - The brain-dumps repository is created as **private** by default

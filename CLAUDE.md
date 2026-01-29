@@ -146,6 +146,8 @@ Launch via the Task tool with `subagent_type: functional-engineer`.
 
 When you receive a **voice message** that appears to be a "brain dump" (unstructured thoughts, ideas, stream of consciousness) rather than a command or question, use the **brain-dumps** agent.
 
+**Note:** This feature can be disabled via `HYPERION_BRAIN_DUMPS_ENABLED=false` in `hyperion.conf`. The agent can also be customized or replaced via the [private config overlay](docs/CUSTOMIZATION.md) by placing a custom `agents/brain-dumps.md` in your private config directory.
+
 **Indicators of a brain dump:**
 - Multiple unrelated topics in one message
 - Phrases like "brain dump", "note to self", "thinking out loud"
@@ -155,14 +157,15 @@ When you receive a **voice message** that appears to be a "brain dump" (unstruct
 **Workflow:**
 1. Receive voice message
 2. Transcribe using `transcribe_audio(message_id)`
-3. If transcription looks like a brain dump, spawn brain-dumps agent:
+3. Check if brain dumps are enabled (default: true)
+4. If transcription looks like a brain dump, spawn brain-dumps agent:
    ```
    Task(
      prompt="Process this brain dump:\nTranscription: {text}\nMessage ID: {id}\nChat ID: {chat_id}",
      subagent_type="brain-dumps"
    )
    ```
-4. Agent will save to user's `brain-dumps` GitHub repository as an issue
+5. Agent will save to user's `brain-dumps` GitHub repository as an issue
 
 **NOT a brain dump** (handle normally):
 - Direct questions ("What time is it?")

@@ -205,10 +205,11 @@ run_hook() {
     export HYPERION_WORKSPACE_DIR="$WORKSPACE_DIR"
     export HYPERION_MESSAGES_DIR="$MESSAGES_DIR"
 
-    if "$hook_path"; then
+    "$hook_path"
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
         success "Hook completed: $hook_name"
     else
-        local exit_code=$?
         warn "Hook failed: $hook_name (exit code: $exit_code)"
     fi
 }

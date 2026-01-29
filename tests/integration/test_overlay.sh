@@ -247,6 +247,24 @@ else
 fi
 
 #===============================================================================
+# Test 12: Hook failure reports correct exit code
+#===============================================================================
+
+run_test "Hook failure reports correct exit code"
+cat > "$PRIVATE_CONFIG_DIR/hooks/failing-hook.sh" << 'EOF'
+#!/bin/bash
+exit 42
+EOF
+chmod +x "$PRIVATE_CONFIG_DIR/hooks/failing-hook.sh"
+HYPERION_CONFIG_DIR="$PRIVATE_CONFIG_DIR"
+output=$(run_hook "failing-hook.sh" 2>&1)
+if echo "$output" | grep -q "exit code: 42"; then
+    test_pass "Hook failure reports correct exit code"
+else
+    test_fail "Hook failure should report exit code 42, got: $output"
+fi
+
+#===============================================================================
 # Cleanup
 #===============================================================================
 

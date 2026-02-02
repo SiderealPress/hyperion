@@ -1,6 +1,6 @@
 # Hyperion
 
-Always-on Claude Code message processor with Telegram integration.
+Always-on Claude Code message processor with Telegram and Slack integration.
 
 ## One-Line Install
 
@@ -12,7 +12,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/SiderealPress/hyperion/main/
 
 Hyperion transforms a server into an always-on Claude Code hub that:
 
-- **Processes messages 24/7** via Telegram
+- **Processes messages 24/7** via Telegram and/or Slack
 - **Maintains persistent context** across restarts
 - **Auto-restarts on failure** via systemd
 - **Provides unified CLI** for management
@@ -40,6 +40,12 @@ Hyperion transforms a server into an always-on Claude Code hub that:
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
+│              SLACK BOT (hyperion-slack-router)              │
+│   Receives messages via Socket Mode                         │
+│   Writes to inbox, sends replies from outbox                │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
 │              SCHEDULED TASKS (Cron)                         │
 │   Automated jobs run on schedule                            │
 │   Each job spawns a fresh Claude instance                   │
@@ -51,8 +57,8 @@ Hyperion transforms a server into an always-on Claude Code hub that:
 
 - Debian 12+ or Ubuntu 22.04+
 - Claude Code authenticated (Max subscription)
-- Telegram bot token (from @BotFather)
-- Your Telegram user ID (from @userinfobot)
+- Telegram bot token (from @BotFather) and/or Slack app tokens
+- Your Telegram user ID (from @userinfobot) if using Telegram
 
 ## Manual Install
 
@@ -312,16 +318,22 @@ bash models/download-ggml-model.sh small
 | Service | Description |
 |---------|-------------|
 | `hyperion-router` | Telegram bot (writes to inbox, sends from outbox) |
+| `hyperion-slack-router` | Slack bot (optional, uses Socket Mode) |
 | `hyperion-claude` | Claude Code session (runs in tmux) |
 | `cron` | Scheduled task executor |
 
 Manual control:
 ```bash
 sudo systemctl status hyperion-router
+sudo systemctl status hyperion-slack-router  # if Slack enabled
 sudo systemctl status hyperion-claude
 tmux -L hyperion list-sessions          # Check tmux session
 hyperion attach                          # Attach to Claude session
 ```
+
+## Slack Integration
+
+To add Slack as a message source, see [docs/SLACK-SETUP.md](docs/SLACK-SETUP.md) for detailed setup instructions.
 
 ## Security
 

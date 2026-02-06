@@ -1,27 +1,29 @@
-# Lobster
+# 🦞 Lobster
 
-Always-on Claude Code message processor with Telegram and Slack integration.
+**A hardened, always-on Claude Code agent** with Telegram and Slack integration.
+
+*Hard shell. Soft skills. Never sleeps.*
 
 ## One-Line Install
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/SiderealPress/hyperion/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/SiderealPress/lobster/main/install.sh)
 ```
 
 ## Overview
 
 Lobster transforms a server into an always-on Claude Code hub that:
 
-- **Processes messages 24/7** via Telegram and/or Slack
-- **Maintains persistent context** across restarts
-- **Auto-restarts on failure** via systemd
-- **Provides unified CLI** for management
+- 🔒 **Runs 24/7** — Claws never stop clicking
+- 🧠 **Maintains persistent context** across restarts
+- ♻️ **Auto-restarts on failure** via systemd
+- 🛡️ **Hardened by design** — sandboxed, isolated, resilient
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                ALWAYS-ON CLAUDE (tmux)                      │
+│                  🦞 LOBSTER CORE (tmux)                     │
 │         Long-running Claude Code session in tmux            │
 │         Blocks on wait_for_messages() - infinite loop       │
 │                                                             │
@@ -63,8 +65,8 @@ Lobster transforms a server into an always-on Claude Code hub that:
 ## Manual Install
 
 ```bash
-git clone https://github.com/SiderealPress/hyperion.git
-cd hyperion
+git clone https://github.com/SiderealPress/lobster.git
+cd lobster
 bash install.sh
 ```
 
@@ -130,7 +132,7 @@ See [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) for detailed documentation on
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `LOBSTER_CONFIG_DIR` | Private config overlay directory | (none) |
-| `LOBSTER_REPO_URL` | Git repository URL | `https://github.com/SiderealPress/hyperion.git` |
+| `LOBSTER_REPO_URL` | Git repository URL | `https://github.com/SiderealPress/lobster.git` |
 | `LOBSTER_BRANCH` | Git branch to install | `main` |
 | `LOBSTER_USER` | System user | `$USER` |
 | `LOBSTER_HOME` | Home directory | `$HOME` |
@@ -157,7 +159,7 @@ lobster help       # Show help
 ## Directory Structure
 
 ```
-~/lobster/                     # Repository
+~/lobster/                     # Repository (the shell)
 ├── src/
 │   ├── bot/lobster_bot.py     # Telegram bot
 │   ├── mcp/inbox_server.py    # MCP server
@@ -181,7 +183,7 @@ lobster help       # Show help
 ├── audio/                     # Voice message files
 └── task-outputs/              # Scheduled job outputs
 
-~/lobster-workspace/           # Claude workspace
+~/lobster-workspace/           # Claude workspace (the brain)
 ├── CLAUDE.md                  # System context
 └── logs/                      # Log files
 ```
@@ -337,10 +339,15 @@ To add Slack as a message source, see [docs/SLACK-SETUP.md](docs/SLACK-SETUP.md)
 
 ## Security
 
-- Bot restricted to allowed user IDs only
-- Credentials stored in config.env (gitignored)
-- No hardcoded secrets in code
+- 🔐 Bot restricted to allowed user IDs only
+- 🔒 Credentials stored in config.env (gitignored)
+- 🛡️ No hardcoded secrets in code
+- 🦞 Hard shell, soft on the inside
 
 ## License
 
 MIT
+
+---
+
+*Built to survive. Designed to serve.* 🦞

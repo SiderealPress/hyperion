@@ -1,4 +1,4 @@
-# Hyperion
+# Lobster
 
 Always-on Claude Code message processor with Telegram and Slack integration.
 
@@ -10,7 +10,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/SiderealPress/hyperion/main/
 
 ## Overview
 
-Hyperion transforms a server into an always-on Claude Code hub that:
+Lobster transforms a server into an always-on Claude Code hub that:
 
 - **Processes messages 24/7** via Telegram and/or Slack
 - **Maintains persistent context** across restarts
@@ -25,7 +25,7 @@ Hyperion transforms a server into an always-on Claude Code hub that:
 │         Long-running Claude Code session in tmux            │
 │         Blocks on wait_for_messages() - infinite loop       │
 │                                                             │
-│   MCP Server: hyperion-inbox                                │
+│   MCP Server: lobster-inbox                                 │
 │   - Message queue management                                │
 │   - Task tracking                                           │
 │   - Scheduled job management                                │
@@ -34,13 +34,13 @@ Hyperion transforms a server into an always-on Claude Code hub that:
                ~/messages/inbox/ ←→ ~/messages/outbox/
                               ↑↓
 ┌─────────────────────────────────────────────────────────────┐
-│              TELEGRAM BOT (hyperion-router)                 │
+│              TELEGRAM BOT (lobster-router)                  │
 │   Writes incoming messages to inbox                         │
 │   Watches outbox and sends replies                          │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
-│              SLACK BOT (hyperion-slack-router)              │
+│              SLACK BOT (lobster-slack-router)               │
 │   Receives messages via Socket Mode                         │
 │   Writes to inbox, sends replies from outbox                │
 └─────────────────────────────────────────────────────────────┘
@@ -70,7 +70,7 @@ bash install.sh
 
 ## Local Installation (VM + Tailscale)
 
-Want to run Hyperion on your local machine instead of a cloud server? You can run it inside a VM with Tailscale Funnel for internet access:
+Want to run Lobster on your local machine instead of a cloud server? You can run it inside a VM with Tailscale Funnel for internet access:
 
 1. Create a Debian 12 VM (UTM, VirtualBox, or VMware)
 2. Install Tailscale and authenticate
@@ -97,10 +97,10 @@ For custom paths or settings:
 
 1. Copy the example configuration:
    ```bash
-   cp config/hyperion.conf.example config/hyperion.conf
+   cp config/lobster.conf.example config/lobster.conf
    ```
 
-2. Edit `config/hyperion.conf` with your settings
+2. Edit `config/lobster.conf` with your settings
 
 3. Run the installer:
    ```bash
@@ -113,7 +113,7 @@ For advanced users who want to keep customizations in a separate repo:
 
 ```bash
 # Set your private config directory
-export HYPERION_CONFIG_DIR=~/hyperion-config
+export LOBSTER_CONFIG_DIR=~/lobster-config
 
 # Run installer
 ./install.sh
@@ -129,37 +129,37 @@ See [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) for detailed documentation on
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `HYPERION_CONFIG_DIR` | Private config overlay directory | (none) |
-| `HYPERION_REPO_URL` | Git repository URL | `https://github.com/SiderealPress/hyperion.git` |
-| `HYPERION_BRANCH` | Git branch to install | `main` |
-| `HYPERION_USER` | System user | `$USER` |
-| `HYPERION_HOME` | Home directory | `$HOME` |
-| `HYPERION_INSTALL_DIR` | Installation directory | `$HOME/hyperion` |
-| `HYPERION_WORKSPACE` | Claude workspace directory | `$HOME/hyperion-workspace` |
-| `HYPERION_MESSAGES` | Message queue directory | `$HOME/messages` |
+| `LOBSTER_CONFIG_DIR` | Private config overlay directory | (none) |
+| `LOBSTER_REPO_URL` | Git repository URL | `https://github.com/SiderealPress/hyperion.git` |
+| `LOBSTER_BRANCH` | Git branch to install | `main` |
+| `LOBSTER_USER` | System user | `$USER` |
+| `LOBSTER_HOME` | Home directory | `$HOME` |
+| `LOBSTER_INSTALL_DIR` | Installation directory | `$HOME/lobster` |
+| `LOBSTER_WORKSPACE` | Claude workspace directory | `$HOME/lobster-workspace` |
+| `LOBSTER_MESSAGES` | Message queue directory | `$HOME/messages` |
 
 ## CLI Commands
 
 ```bash
-hyperion start      # Start all services
-hyperion stop       # Stop all services
-hyperion restart    # Restart services
-hyperion status     # Show status
-hyperion attach     # Attach to Claude tmux session
-hyperion logs       # Show logs (follow mode)
-hyperion inbox      # Check pending messages
-hyperion outbox     # Check pending replies
-hyperion stats      # Show statistics
-hyperion test       # Create test message
-hyperion help       # Show help
+lobster start      # Start all services
+lobster stop       # Stop all services
+lobster restart    # Restart services
+lobster status     # Show status
+lobster attach     # Attach to Claude tmux session
+lobster logs       # Show logs (follow mode)
+lobster inbox      # Check pending messages
+lobster outbox     # Check pending replies
+lobster stats      # Show statistics
+lobster test       # Create test message
+lobster help       # Show help
 ```
 
 ## Directory Structure
 
 ```
-~/hyperion/                    # Repository
+~/lobster/                     # Repository
 ├── src/
-│   ├── bot/hyperion_bot.py    # Telegram bot
+│   ├── bot/lobster_bot.py     # Telegram bot
 │   ├── mcp/inbox_server.py    # MCP server
 │   └── cli                    # CLI tool
 ├── scripts/
@@ -181,14 +181,14 @@ hyperion help       # Show help
 ├── audio/                     # Voice message files
 └── task-outputs/              # Scheduled job outputs
 
-~/hyperion-workspace/          # Claude workspace
+~/lobster-workspace/           # Claude workspace
 ├── CLAUDE.md                  # System context
 └── logs/                      # Log files
 ```
 
 ## MCP Tools
 
-The hyperion-inbox MCP server provides:
+The lobster-inbox MCP server provides:
 
 ### Message Queue
 - `check_inbox(source?, limit?)` - Get new messages
@@ -227,7 +227,7 @@ Access GitHub repositories, issues, PRs, and projects via the GitHub MCP server:
 
 ## GitHub Integration
 
-Hyperion integrates with GitHub via the official GitHub MCP server. This allows directing work through GitHub issues and project boards.
+Lobster integrates with GitHub via the official GitHub MCP server. This allows directing work through GitHub issues and project boards.
 
 ### Setup
 
@@ -247,10 +247,10 @@ claude mcp list
 
 ```
 User: "Check my GitHub issues"
-Hyperion: Uses mcp__github tools to list and summarize issues
+Lobster: Uses mcp__github tools to list and summarize issues
 
 User: "Work on issue #42"
-Hyperion: Reads issue details, implements solution, comments on progress
+Lobster: Reads issue details, implements solution, comments on progress
 ```
 
 ## Scheduled Jobs
@@ -287,7 +287,7 @@ Main Claude:
 
 ## Voice Messages
 
-Hyperion supports voice message transcription using local whisper.cpp:
+Lobster supports voice message transcription using local whisper.cpp:
 
 - Voice messages are automatically downloaded from Telegram
 - Use `transcribe_audio(message_id)` to transcribe
@@ -295,7 +295,7 @@ Hyperion supports voice message transcription using local whisper.cpp:
 - No cloud API or API key required
 
 **Dependencies:**
-- **whisper.cpp** - Local speech recognition (installed in `~/hyperion-workspace/whisper.cpp/`)
+- **whisper.cpp** - Local speech recognition (installed in `~/lobster-workspace/whisper.cpp/`)
 - **FFmpeg** - Audio format conversion (OGG → WAV)
 
 **Setup:**
@@ -304,7 +304,7 @@ Hyperion supports voice message transcription using local whisper.cpp:
 sudo apt-get install -y ffmpeg
 
 # Clone and compile whisper.cpp
-cd ~/hyperion-workspace
+cd ~/lobster-workspace
 git clone https://github.com/ggerganov/whisper.cpp.git
 cd whisper.cpp
 make -j$(nproc)
@@ -317,18 +317,18 @@ bash models/download-ggml-model.sh small
 
 | Service | Description |
 |---------|-------------|
-| `hyperion-router` | Telegram bot (writes to inbox, sends from outbox) |
-| `hyperion-slack-router` | Slack bot (optional, uses Socket Mode) |
-| `hyperion-claude` | Claude Code session (runs in tmux) |
+| `lobster-router` | Telegram bot (writes to inbox, sends from outbox) |
+| `lobster-slack-router` | Slack bot (optional, uses Socket Mode) |
+| `lobster-claude` | Claude Code session (runs in tmux) |
 | `cron` | Scheduled task executor |
 
 Manual control:
 ```bash
-sudo systemctl status hyperion-router
-sudo systemctl status hyperion-slack-router  # if Slack enabled
-sudo systemctl status hyperion-claude
-tmux -L hyperion list-sessions          # Check tmux session
-hyperion attach                          # Attach to Claude session
+sudo systemctl status lobster-router
+sudo systemctl status lobster-slack-router  # if Slack enabled
+sudo systemctl status lobster-claude
+tmux -L lobster list-sessions          # Check tmux session
+lobster attach                          # Attach to Claude session
 ```
 
 ## Slack Integration
